@@ -13,4 +13,10 @@ ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="/bin/chm
 
 The current version requires setting the files within the script. A future version will have a small configuration file for separation of code and data. The code should be simple enough to work on all Python versions without dependencies.
 
+---
+
+Input is taken as the first argument on the command line, which is an integer from `MIN` to `MAX`. Current version will perform limiting on the input, i.e. if the input is higher or lower than `MAX` or `MIN` respectively, the value used will be the relevant limit. Future versions may complain about invalid input for input enforcement.
+
+---
+
 Released to the public domain.
