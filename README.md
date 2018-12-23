@@ -4,8 +4,9 @@ A Python script to change screen brightness via the [ACPI method](https://wiki.a
 
 In order to use this script, you must have read and write permissions on the relevant files in `/sys/class/backlight/{KERNEL}`. From the above wiki page:
 
-`/etc/udev/rules.d/backlight.rules`
 ```
+/etc/udev/rules.d/backlight.rules
+
 ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness"
 ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness"
 ```
