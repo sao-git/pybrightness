@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from sys import argv, exit, stderr
-from typing import TextIO, Tuple
+from typing import Callable, Iterable, TextIO, Tuple, Optional
+from itertools import islice
 
 # See https://wiki.archlinux.org/index.php/Backlight#ACPI for more information
 # on the method used in this script.
@@ -41,6 +42,23 @@ def set_val(file_path: str, val: int) -> Tuple[int, int]:
     return len(val_out), bytes_written
 
 
+def as_percent(x: int) -> str:
+    return f'{x * 100:.1f}%'
+
+
+def get_val_list(vals: Iterable, per_line: int, max_brightness: int) -> str:
+    vals_slice = tuple(islice(vals, per_line))
+    vals_out = []
+
+    fmt = lambda i, x: f'{i} -> {x} ({as_percent(x/max_brightness)})'
+
+    while vals_slice:
+        vals_out.append(", ".join(fmt(i,x) for i,x in vals_slice))
+        vals_slice = tuple(islice(vals, per_line))
+
+    return ",\n".join(vals_out) + '\n\n'
+
+
 if __name__ == "__main__":
     # Base path to required "files"
     path = "/sys/class/backlight/intel_backlight"
@@ -69,15 +87,27 @@ if __name__ == "__main__":
     # Grab the maximum brightness value
     max_brightness: int = read_val(path + get_this)
 
+    calc_val: Callable
+    calc_val = lambda x: round(MIN + (x / MAX)**exponent * (max_brightness - MIN))
+
     if len(argv) == 1:
         act_val = read_val(path + check_this)
         k = (act_val - MIN)/(max_brightness - MIN)
         arg_val = round(MAX * k**(1/exponent))
 
-        out1 = f'Actual brightness value from the system: {act_val:d}\n'
-        out2 = f'Give this value to me to set this brightness: {arg_val:d}'
+        output_range: Iterable = ((i, calc_val(i)) for i in range(MIN, MAX+1))
+        out1: str = get_val_list(output_range, 3, max_brightness)
 
-        print(out1 + out2)
+        #print('Input range is [5..25]\n')
+        print('Input -> Output (Percent of full brightness):\n')
+
+
+
+
+        out2 = f'Current brightness is {act_val:d} out of {max_brightness}\n'
+        out3 = f'Give me a value of {arg_val} to set this brightness'
+
+        print(out1 + out2 + out3)
         exit(0)
 
     # Take the first argument on the command line as integer input.
@@ -89,13 +119,13 @@ if __name__ == "__main__":
         arg = MAX
 
     # The input to output curve.
-    val: int = round(MIN + (arg / MAX)**exponent * (max_brightness - MIN))
+    val: int = calc_val(arg)
 
     # Write out the brightness level and exit with a success code.
     len_val, len_written = set_val(path + set_this, val)
 
     if len_val == len_written:
-        print(f'Set the brightness to {val:d} out of {max_brightness:d}')
+        print(f'Setting the brightness to {val:d} out of {max_brightness:d}')
         exit(0)
     else:
         print('something went wrong', file=stderr)
