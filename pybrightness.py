@@ -9,9 +9,10 @@ from typing import TextIO, Tuple
 #    * Have the user set the backlight path and files in a config file
 #    * Maybe use an exponential curve instead of a power curve
 #    * Explore increasing MAX effectively and/or accepting real inputs
+#    * Improve the curve so that lower values don't collide (linear ramp?)
 
 
-# File to write new brightness, can also be read to get current value
+# `set_this`: file to write new brightness, can also be read to get current value
 # User must have write access to this file, typically by setting a udev rule
 # to give the `video` group write access and adding the user to that group:
 #
@@ -50,18 +51,7 @@ if __name__ == "__main__":
     check_this = "/actual_brightness"
 
 
-    if len(argv) == 1:
-        actual_brightness: int = read_val(path + check_this)
 
-        print(actual_brightness)
-        exit(0)
-
-
-    # Grab the maximum brightness value
-    max_brightness: int = read_val(path + get_this)
-
-    # Take the first argument on the command line as integer input.
-    arg = int(argv[1])
 
     # Since output must be rounded, the MAX must be low enough to make lower
     # input values effective, i.e. setting MAX too high will cause lower inputs to
@@ -71,14 +61,32 @@ if __name__ == "__main__":
     # display off. There is typically a better way to do that.
     MIN = 5
 
-    if arg < MIN:
-        arg = MIN
-    elif arg > MAX:
-        arg = MAX
 
     # Exponent that scales the input to output curve. A positive exponent devotes
     # more of the input values to lower brightness levels.
     exponent = 3
+
+    # Grab the maximum brightness value
+    max_brightness: int = read_val(path + get_this)
+
+    if len(argv) == 1:
+        act_val = read_val(path + check_this)
+        k = (act_val - MIN)/(max_brightness - MIN)
+        arg_val = round(MAX * k**(1/exponent))
+
+        out1 = f'Actual brightness value from the system: {act_val:d}\n'
+        out2 = f'Give this value to me to set this brightness: {arg_val:d}'
+
+        print(out1 + out2)
+        exit(0)
+
+    # Take the first argument on the command line as integer input.
+    arg = int(argv[1])
+
+    if arg < MIN:
+        arg = MIN
+    elif arg > MAX:
+        arg = MAX
 
     # The input to output curve.
     val: int = round(MIN + (arg / MAX)**exponent * (max_brightness - MIN))
@@ -87,7 +95,8 @@ if __name__ == "__main__":
     len_val, len_written = set_val(path + set_this, val)
 
     if len_val == len_written:
+        print(f'Set the brightness to {val:d} out of {max_brightness:d}')
         exit(0)
     else:
-        print("something went wrong", file=stderr)
+        print('something went wrong', file=stderr)
         exit(1)
