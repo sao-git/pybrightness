@@ -42,7 +42,7 @@ def set_val(file_path: str, val: int) -> Tuple[int, int]:
     return len(val_out), bytes_written
 
 
-def as_percent(x: int) -> str:
+def as_percent(x: float) -> str:
     return f'{x * 100:.1f}%'
 
 
@@ -125,7 +125,8 @@ if __name__ == "__main__":
     len_val, len_written = set_val(path + set_this, val)
 
     if len_val == len_written:
-        print(f'Setting the brightness to {val:d} out of {max_brightness:d}')
+        val_percent = as_percent(val/max_brightness)
+        print(f'Setting the brightness to {val:d} ({val_percent}) out of {max_brightness:d}')
         exit(0)
     else:
         print('something went wrong', file=stderr)
